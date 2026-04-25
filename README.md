@@ -1,6 +1,6 @@
 # CineSync WatchParty
 
-A local-file watch party app with React, Express, and Socket.IO.
+A local-file watch party app with React, Vite, Express, and Socket.IO.
 
 ## Features
 
