@@ -1,0 +1,67 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-void);
+  position: relative;
+}
+
+.bg {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(245,166,35,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.content {
+  position: relative;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 40px;
+}
+
+.icon {
+  font-family: var(--font-display);
+  font-size: 120px;
+  font-weight: 800;
+  color: var(--accent);
+  text-shadow: 0 0 60px var(--accent-glow);
+  letter-spacing: -0.05em;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.desc {
+  font-size: 16px;
+  color: var(--text-secondary);
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+.homeBtn {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 14px 32px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+.homeBtn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+}
