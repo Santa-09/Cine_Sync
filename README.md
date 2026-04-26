@@ -9,7 +9,7 @@ A local-file watch party app with React, Vite, Express, and Socket.IO.
 - Movie list from the server `movies/` folder
 - Upload a movie from the host computer into `movies/`
 - Direct video URL playback when the URL is browser-playable
-- Render-ready build/start configuration
+- Railway-ready build/start configuration
 
 ## Local Setup
 
@@ -67,11 +67,11 @@ Supported extensions:
 
 Browser playback works best with `.mp4` using H.264 video and AAC audio.
 
-## Render Deploy
+## Railway Deploy
 
-This repo now includes [render.yaml](/c:/Users/santa/OneDrive/Desktop/watchparty1/render.yaml).
+Railway can deploy this repo directly from the project root.
 
-Render uses:
+Use:
 
 ```text
 Build command: npm install && npm run build
@@ -79,27 +79,22 @@ Start command: npm start
 Healthcheck: /api/health
 ```
 
-Set these Render environment values:
+Set these Railway environment values:
 
 ```env
 NODE_ENV=production
-CLIENT_URL=https://your-app.onrender.com
-MOVIES_DIR=/var/data/movies
-```
-
-Set this secret in Render:
-
-```env
+CLIENT_URL=https://your-app.up.railway.app
+MOVIES_DIR=/data/movies
 ADMIN_SECRET=your-secure-password
 ```
 
 For persistent movie storage:
 
-1. Create the web service from this repo.
-2. Attach the disk defined in `render.yaml`.
-3. Keep `MOVIES_DIR=/var/data/movies`.
+1. Create a Railway volume.
+2. Mount it in the service.
+3. Keep `MOVIES_DIR` pointed at the mounted path, for example `/data/movies`.
 
-Without a disk, uploaded movies can disappear after redeploy or restart.
+Without persistent storage, uploaded movies can disappear after restart or redeploy.
 
 Important:
 

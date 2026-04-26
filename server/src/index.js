@@ -17,7 +17,6 @@ const allowedOrigins = [
   'http://localhost:3000',
   /\.railway\.app$/,
   /\.up\.railway\.app$/,
-  /\.onrender\.com$/,
 ];
 
 const io = new Server(server, {
