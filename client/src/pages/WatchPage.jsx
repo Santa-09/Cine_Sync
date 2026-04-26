@@ -6,6 +6,13 @@ import { useVideoSync } from '../hooks/useVideoSync';
 import { useRoom } from '../context/RoomContext';
 import styles from './WatchPage.module.css';
 
+const CHUNK_RETRY_LIMIT = 3;
+const RESUME_STORAGE_PREFIX = 'cine-sync-upload';
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default function WatchPage() {
   const { roomId: routeRoomId } = useParams();
   const roomId = routeRoomId.toUpperCase();
@@ -36,6 +43,7 @@ export default function WatchPage() {
   const [fileError, setFileError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState('');
   const [directUrl, setDirectUrl] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
@@ -227,24 +235,87 @@ export default function WatchPage() {
   const uploadMovie = async (file) => {
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('movie', file);
     setUploading(true);
     setUploadProgress(0);
+    setUploadStatus('Preparing upload...');
     setFileError('');
 
     try {
-      const { data } = await axios.post('/api/videos/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (event) => {
-          if (!event.total) return;
-          setUploadProgress(Math.round((event.loaded / event.total) * 100));
-        },
+      const resumeKey = `${file.name}-${file.size}-${file.lastModified}`
+        .replace(/[^a-z0-9_-]/gi, '-')
+        .slice(0, 120);
+      const storageKey = `${RESUME_STORAGE_PREFIX}:${resumeKey}`;
+      const { data: session } = await axios.post('/api/videos/upload-session', {
+        filename: file.name,
+        fileSize: file.size,
+        resumeKey,
       });
+
+      const uploadedChunks = new Set(session.uploadedChunks || []);
+      let uploadedBytes = 0;
+
+      uploadedChunks.forEach((chunkIndex) => {
+        const chunkStart = chunkIndex * session.chunkSize;
+        const chunkEnd = Math.min(file.size, chunkStart + session.chunkSize);
+        uploadedBytes += Math.max(0, chunkEnd - chunkStart);
+      });
+
+      setUploadProgress(Math.round((uploadedBytes / file.size) * 100));
+      setUploadStatus(session.resumed ? 'Resuming upload...' : 'Uploading chunks...');
+      localStorage.setItem(storageKey, session.uploadId);
+
+      for (let chunkIndex = 0; chunkIndex < session.totalChunks; chunkIndex += 1) {
+        if (uploadedChunks.has(chunkIndex)) continue;
+
+        const chunkStart = chunkIndex * session.chunkSize;
+        const chunkEnd = Math.min(file.size, chunkStart + session.chunkSize);
+        const chunk = file.slice(chunkStart, chunkEnd);
+
+        let uploaded = false;
+        let lastError = null;
+
+        for (let attempt = 1; attempt <= CHUNK_RETRY_LIMIT; attempt += 1) {
+          try {
+            setUploadStatus(
+              attempt > 1
+                ? `Retrying chunk ${chunkIndex + 1} of ${session.totalChunks}...`
+                : `Uploading chunk ${chunkIndex + 1} of ${session.totalChunks}...`
+            );
+
+            await axios.put(`/api/videos/upload-session/${session.uploadId}/chunks/${chunkIndex}`, chunk, {
+              headers: {
+                'Content-Type': 'application/octet-stream',
+              },
+              timeout: 120000,
+            });
+
+            uploaded = true;
+            uploadedBytes += chunk.size;
+            setUploadProgress(Math.round((uploadedBytes / file.size) * 100));
+            break;
+          } catch (error) {
+            lastError = error;
+            if (attempt < CHUNK_RETRY_LIMIT) {
+              await delay(1000 * attempt);
+            }
+          }
+        }
+
+        if (!uploaded) {
+          throw lastError || new Error('Chunk upload failed.');
+        }
+      }
+
+      setUploadStatus('Finalizing upload...');
+      const { data } = await axios.post(`/api/videos/upload-session/${session.uploadId}/complete`);
+      localStorage.removeItem(storageKey);
+      setUploadProgress(100);
+      setUploadStatus('Upload complete.');
       await loadLocalFiles();
       setLocalVideo(data.filename);
     } catch (err) {
       setFileError(err.response?.data?.error || 'Upload failed.');
+      setUploadStatus('');
     } finally {
       setUploading(false);
     }
@@ -425,6 +496,14 @@ export default function WatchPage() {
                   onChange={(event) => uploadMovie(event.target.files?.[0])}
                 />
               </label>
+              {uploading && (
+                <div className={styles.uploadMeta}>
+                  <div className={styles.uploadProgressBar}>
+                    <div className={styles.uploadProgressFill} style={{ width: `${uploadProgress}%` }} />
+                  </div>
+                  <p className={styles.urlSubtitle}>{uploadStatus}</p>
+                </div>
+              )}
               <div className={styles.urlRow}>
                 <input
                   className={styles.urlInput}
