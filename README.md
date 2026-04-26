@@ -97,6 +97,68 @@ For persistent movie storage:
 
 Without a volume, uploaded movies can disappear after redeploy.
 
+## Fly.io Deploy
+
+This repo now includes [fly.toml](/c:/Users/santa/OneDrive/Desktop/watchparty1/fly.toml) and a production [Dockerfile](/c:/Users/santa/OneDrive/Desktop/watchparty1/Dockerfile).
+
+The Fly setup is tuned for this app:
+
+- React is built during the image build.
+- Express serves the built client and Socket.IO.
+- Health check uses `/api/health`.
+- Uploaded movies are stored in a Fly volume mounted at `/data`.
+- The app is kept to a single running machine because rooms and playback state live in memory.
+
+Create the Fly app and volume:
+
+```bash
+fly launch --no-deploy
+fly volumes create cine_sync_data --region sin --size 10
+```
+
+Set secrets:
+
+```bash
+fly secrets set ADMIN_SECRET=change-me CLIENT_URL=https://cine-sync.fly.dev
+```
+
+Deploy:
+
+```bash
+fly deploy
+```
+
+Fly dashboard values if you deploy from GitHub:
+
+```text
+App name: cine-sync
+Region: sin
+Internal port: 8080
+Working directory: ./
+Config path: ./fly.toml
+```
+
+Environment variables:
+
+```env
+NODE_ENV=production
+PORT=8080
+MOVIES_DIR=/data/movies
+CLIENT_URL=https://cine-sync.fly.dev
+```
+
+Secrets:
+
+```env
+ADMIN_SECRET=your-secure-password
+```
+
+Important:
+
+- Do not enable multiple machines for this version of the app.
+- Do not attach Fly Postgres unless you plan to rewrite room storage; the current app does not use a database.
+- If you add a custom domain later, update `CLIENT_URL` to that HTTPS URL too.
+
 ## Push Checklist
 
 Before pushing:

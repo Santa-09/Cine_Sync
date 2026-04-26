@@ -17,6 +17,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   /\.railway\.app$/,
   /\.up\.railway\.app$/,
+  /\.fly\.dev$/,
 ];
 
 const io = new Server(server, {
