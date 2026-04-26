@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: cine-sync
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false
+      - key: MOVIES_DIR
+        value: /var/data/movies
+    disk:
+      name: movies
+      mountPath: /var/data
+      sizeGB: 10
